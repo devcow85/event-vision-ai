@@ -1,7 +1,9 @@
-from tsslbp import datasets
+from eva import datasets
 import matplotlib.pyplot as plt
 
 import numpy as np
+
+import time
 
 def normalize_and_convert_to_uint8(data):
     """데이터를 0-255 사이로 정규화하고, uint8로 변환"""
@@ -35,13 +37,71 @@ def plot_images(loader, n):
     final_image = np.concatenate(images_concat, axis=0)
     i8_data = normalize_and_convert_to_uint8(final_image)
     
-    plt.imsave('train_concat_image.png', i8_data)
-       
+    plt.imsave('examples/train_concat_image.png', i8_data)
+
+def load_dataset(loader, n):
+    loading_time = []
+    
+    loop_start = time.time()
+    for i in range(n):  # Use n as the loop count
+        start_time = time.time()
+        events, target = loader.dataset[i]
+        loading_time.append(time.time() - start_time)
+    loop_end = time.time()
+    
+    print('total loop time', loop_end - loop_start)
+    
+    
+    # Calculate the mean and standard deviation
+    mean_time = np.mean(loading_time)
+    std_dev = np.std(loading_time)
+    
+    # Convert times to seconds and milliseconds for formatting
+    mean_time_s = mean_time * 1000
+    std_dev_ms = std_dev * 1000  # Convert to milliseconds
+    
+    # Print in the desired format
+    print(f"{mean_time_s:.2f} ms ± {std_dev_ms:.0f} ms per image (mean ± std. dev. of {n} runs, 1 loop each)")
+
+def load_dataloader(loader, n):
+    loading_time = []
+    
+    dlen = 0
+    loop_start = time.time()
+    # Loop through the loader with n batches (or iterations)
+    for idx, (events, target) in enumerate(loader):
+        dlen+=events.shape[0]
+        if idx >= n:  # Stop after n iterations
+            break
+        start_time = time.time()
+        
+        # Access the batch data (events and target are the loaded data)
+        _ = events, target  # Simulating data usage without actually processing
+        
+        loading_time.append((time.time() - start_time)/dlen)
+        
+    loop_end = time.time()
+    print('total loop time', loop_end - loop_start)
+    
+    # Calculate the mean and standard deviation
+    mean_time = np.mean(loading_time)
+    std_dev = np.std(loading_time)
+    
+    # Convert times to seconds and milliseconds for formatting
+    mean_time_s = mean_time * 1000 
+    std_dev_ms = std_dev * 1000  # Convert to milliseconds
+    
+    # Print in the desired format
+    print(f"{mean_time_s:.2f} ms ± {std_dev_ms:.0f} ms per image (mean ± std. dev. of {n} runs, 1 loop each)")
+
+
 if __name__ == "__main__":
     print('load dataset')
     
-    train_loader, val_loader = datasets.get_nmnist_dataset('data/', 64, 10, 1000)
+    train_loader, val_loader = datasets.get_gesture_dataset('/data', 64, 10, 1000)
     
     plot_images(train_loader, 10)
     
+    load_dataset(train_loader, 640)
+    load_dataloader(train_loader, 10)
     

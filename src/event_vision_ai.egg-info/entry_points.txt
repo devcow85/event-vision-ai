@@ -1,0 +1,2 @@
+[console_scripts]
+event-vision-ai = eva.main:main

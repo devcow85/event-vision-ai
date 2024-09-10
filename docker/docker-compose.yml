@@ -26,7 +26,7 @@ services:
             - driver: nvidia
               count: all  # Use all available GPUs
               capabilities: [gpu]
-    volumns:
+    volumes:
       - /mnt/data/image_data:/data
 
     tmpfs:

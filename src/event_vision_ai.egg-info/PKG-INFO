@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: event-vision-ai
+Version: 0.0.1
+Requires-Dist: torch
+Requires-Dist: torchvision
+Requires-Dist: tonic
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"

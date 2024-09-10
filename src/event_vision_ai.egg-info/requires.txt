@@ -1,0 +1,7 @@
+torch
+torchvision
+tonic
+
+[dev]
+pytest
+pytest-cov

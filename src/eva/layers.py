@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tsslbp.tsslbp import TSSLBP
+from eva.tsslbp import TSSLBP
 
 
 class SNNConv3d(nn.Conv3d):
