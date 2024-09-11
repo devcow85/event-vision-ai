@@ -1,9 +1,5 @@
-from torch.utils.data import DataLoader, Dataset
-
-import tonic
-import tonic.transforms as transforms
-
 import os
+from torch.utils.data import Dataset
 
 from eva.prophesee_parser import PSEELoader
 

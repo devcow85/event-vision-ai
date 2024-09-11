@@ -1,4 +1,3 @@
-import tonic
 import tonic.transforms as transforms
 from torch.utils.data import DataLoader
 
