@@ -82,6 +82,7 @@ if __name__ == "__main__":
     
     # load dataset
     transform = transforms.Compose([
+        eva_transforms.RandomTemporalCrop(time_window = 99000),
         transforms.ToFrame(sensor_size=tonic.datasets.NMNIST.sensor_size,
                            n_time_bins=5)
     ])
@@ -89,6 +90,12 @@ if __name__ == "__main__":
     train_ds = tonic.datasets.NMNIST(save_to = '/data', 
                                          train=True, 
                                          transform = transform)
+    
+    transform = transforms.Compose([
+        eva_transforms.TemporalCrop(time_window = 99000),
+        transforms.ToFrame(sensor_size=tonic.datasets.NMNIST.sensor_size,
+                           n_time_bins=5)
+    ])
     
     val_ds = tonic.datasets.NMNIST(save_to = '/data', 
                                          train=False, 

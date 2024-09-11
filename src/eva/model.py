@@ -72,3 +72,35 @@ class NMNISTNet(nn.Module):
         
         y = self.block2(self.block1(x))
         return self.fc(y)
+    
+class NCARSNet(nn.Module):
+    def __init__(self, tau_m, tau_s, n_steps):
+        super(NCARSNet, self).__init__()
+        tsslbp_config = {'use_tsslbp':True, 
+                        'tau_m':tau_m,
+                        'tau_s':tau_s,
+        
+                        'n_steps':n_steps}
+        
+        self.block1 = conv_pool_block(1, 15, 5, 2, 2, 2, tsslbp_config)
+        self.block2 = conv_pool_block(15, 40, 5, 2, 2, 2, tsslbp_config)
+        self.block3 = conv_pool_block(40, 80, 3, 1, 2, 2, tsslbp_config)
+        self.block4 = conv_pool_block(80, 160, 3, 1, 2, 2, tsslbp_config)
+        self.block5 = conv_pool_block(160, 320, 3, 1, 4, 4, tsslbp_config)
+        
+        self.fc1 = L.SNNLinear(320, 64, **tsslbp_config)
+        self.fc2 = L.SNNLinear(64, 2, **tsslbp_config)
+        
+    def forward(self, x):
+        x = x.permute(0,2,3,4,1)
+        
+        y = self.block1(x)
+        y = self.block2(y)
+        y = self.block3(y)
+        y = self.block4(y)
+        y = self.block5(y)
+        
+        y = self.fc1(y)
+        y = self.fc2(y)
+        
+        return y

@@ -82,6 +82,7 @@ if __name__ == "__main__":
     # load dataset
     transform = transforms.Compose([
         eva_transforms.RandomTemporalCrop(time_window = 99000),
+        transforms.Denoise(filter_time=11000),
         transforms.ToFrame(sensor_size=tonic.datasets.DVSGesture.sensor_size,
                            n_time_bins=5)
     ])
@@ -92,6 +93,7 @@ if __name__ == "__main__":
     
     transform = transforms.Compose([
         eva_transforms.TemporalCrop(time_window = 99000),
+        transforms.Denoise(filter_time=11000),
         transforms.ToFrame(sensor_size=tonic.datasets.DVSGesture.sensor_size,
                            n_time_bins=5)
     ])
@@ -100,9 +102,9 @@ if __name__ == "__main__":
                                          train=False, 
                                          transform = transform)
     
-    batch_size = 32
-    train_loader = DataLoader(train_ds, shuffle=True, batch_size=batch_size, num_workers=4)
-    val_loader = DataLoader(val_ds, shuffle=False, batch_size=batch_size, num_workers=4)
+    batch_size = 64
+    train_loader = DataLoader(train_ds, shuffle=True, batch_size=batch_size, num_workers=8)
+    val_loader = DataLoader(val_ds, shuffle=False, batch_size=batch_size, num_workers=8)
     
     snn_model = model.DVSGestureNet(5, 1, n_steps = 5)
     
