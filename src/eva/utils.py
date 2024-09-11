@@ -1,4 +1,5 @@
 import random
+import re
 
 import numpy as np
 import torch
@@ -20,6 +21,41 @@ def set_seed(random_seed):
     np.random.seed(random_seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+def _parse_extra_repr(extra_repr_str):
+    # Split the string by commas while keeping the text inside parentheses together
+    parts = re.split(r',\s*(?![^()]*\))', extra_repr_str)
+    
+    args = []
+    kwargs = {}
+    
+    for part in parts:
+        if '=' in part:
+            key, value = part.split('=', 1)
+            key = key.strip()
+            value = value.strip()
+            try:
+                kwargs[key] = eval(value)
+            except NameError:
+                kwargs[key] = value  # For strings and unrecognized types
+        else:
+            try:
+                args.append(eval(part.strip()))
+            except NameError:
+                args.append(part.strip())
+    
+    return args, kwargs
+
+def _tensor_to_numpy(tensor):
+    if tensor.is_quantized:
+        tensor = tensor.int_repr().float()
+    return tensor.detach().cpu().numpy()
+
+def _convert_state_dict_to_numpy(state_dict):
+    numpy_state_dict = {}
+    for key, value in state_dict.items():
+        numpy_state_dict[key] = _tensor_to_numpy(value) if isinstance(value, torch.Tensor) else value
+    return numpy_state_dict
 
 def to_uint8(data):
     """데이터를 0-255 사이로 정규화하고, uint8로 변환"""
