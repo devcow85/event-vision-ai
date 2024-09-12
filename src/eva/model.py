@@ -25,7 +25,8 @@ class BaseNet(nn.Module):
         self.layers = nn.ModuleList()  # A single ModuleList to store all layers (conv and fc)
         
         self.trace_dict = {}
-        
+        self.hooks = []  # Store forward hooks
+
 
     # Helper method to create layers dynamically
     def _make_layers(self, layer_configs):
@@ -59,8 +60,14 @@ class BaseNet(nn.Module):
         for name, module in self.named_modules():
             # Check if the module has no submodules (leaf module)
             if len(list(module.children())) == 0:
-                module.register_forward_hook(self._hook_fn(name))
+                hook = module.register_forward_hook(self._hook_fn(name))
+                self.hooks.append(hook)
 
+    def remove_hook(self):
+        for hook in self.hooks:
+            hook.remove()
+        self.hooks.clear()
+    
     def weight_clipper(self):
         for name, module in self.named_modules():
             # Check if the module has no submodules (leaf module)
@@ -88,6 +95,25 @@ class BaseNet(nn.Module):
         print(f"Model loaded from {filename}")
         print("tsslbp config changed!")
         print(self.tsslbp_config)
+        
+    def summary(self, input_shape):
+        self.register_hook()
+        self.forward(torch.rand((1,)+input_shape))
+        self.remove_hook()
+        
+        key_data = list(self.trace_dict.keys())
+        
+        
+        summary_dict = {
+            "num_layers": len(key_data),
+            "input_shape": input_shape,
+            "num_classes": self.trace_dict[key_data[-1]]['outputs'].shape[1],
+            "num_parameters": sum(p.numel() for p in self.parameters())
+        }
+        
+        self.trace_dict = {}
+        
+        return summary_dict | self.tsslbp_config
 
 # NCARS Network 64x64 input
 class NCARSNet(BaseNet):

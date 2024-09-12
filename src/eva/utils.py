@@ -122,6 +122,9 @@ def train(model, epochs, data_loader, optimizer, loss, device = "cuda"):
             
             nbatch.set_postfix_str(f"train acc: {total_acc / total_len:.3f}, train loss: {total_loss / total_len:.3f}")
 
+        return total_acc, total_loss, total_len
+    
+    
 def validation(model, data_loader, device):
     total_acc = 0
     total_len = 0
@@ -145,3 +148,5 @@ def validation(model, data_loader, device):
                 .item()
             )
             nbatch.set_postfix_str(f"val acc: {total_acc / total_len:.3f}")
+            
+    return total_acc, total_len
