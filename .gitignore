@@ -1,3 +1,6 @@
 data
 cache
 build
+result
+*egg-info*
+__pycache__

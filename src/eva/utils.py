@@ -1,4 +1,5 @@
 import random
+import re
 
 import numpy as np
 import torch
@@ -20,6 +21,41 @@ def set_seed(random_seed):
     np.random.seed(random_seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+def _parse_extra_repr(extra_repr_str):
+    # Split the string by commas while keeping the text inside parentheses together
+    parts = re.split(r',\s*(?![^()]*\))', extra_repr_str)
+    
+    args = []
+    kwargs = {}
+    
+    for part in parts:
+        if '=' in part:
+            key, value = part.split('=', 1)
+            key = key.strip()
+            value = value.strip()
+            try:
+                kwargs[key] = eval(value)
+            except NameError:
+                kwargs[key] = value  # For strings and unrecognized types
+        else:
+            try:
+                args.append(eval(part.strip()))
+            except NameError:
+                args.append(part.strip())
+    
+    return args, kwargs
+
+def _tensor_to_numpy(tensor):
+    if tensor.is_quantized:
+        tensor = tensor.int_repr().float()
+    return tensor.detach().cpu().numpy()
+
+def _convert_state_dict_to_numpy(state_dict):
+    numpy_state_dict = {}
+    for key, value in state_dict.items():
+        numpy_state_dict[key] = _tensor_to_numpy(value) if isinstance(value, torch.Tensor) else value
+    return numpy_state_dict
 
 def to_uint8(data):
     """데이터를 0-255 사이로 정규화하고, uint8로 변환"""
@@ -62,11 +98,11 @@ def train(model, epochs, data_loader, optimizer, loss, device = "cuda"):
         for data, targets in nbatch:
             data = data.to(torch.float32)
             data, targets = data.to(device), targets.to(device)
-            
+                        
             optimizer.zero_grad()
             outputs = model(data)
             
-            output_sspike = torch.sum(outputs, dim=4).squeeze_(-1).squeeze_(-1).detach().cpu().numpy()
+            output_spike = torch.sum(outputs, dim=4).squeeze_(-1).squeeze_(-1).detach().cpu().numpy()
             
             vloss = loss(outputs, targets)
             vloss.backward()
@@ -79,16 +115,21 @@ def train(model, epochs, data_loader, optimizer, loss, device = "cuda"):
             total_len+=len(targets)
             
             total_acc+=(
-                (output_sspike.argmax(axis=1) == targets.cpu().numpy())
+                (output_spike.argmax(axis=1) == targets.cpu().numpy())
                 .sum()
                 .item()
             )
             
             nbatch.set_postfix_str(f"train acc: {total_acc / total_len:.3f}, train loss: {total_loss / total_len:.3f}")
 
+        return total_acc, total_loss, total_len
+    
+    
 def validation(model, data_loader, device):
     total_acc = 0
     total_len = 0
+    all_targets = []
+    all_preds = []
     
     model.eval()
     
@@ -100,12 +141,20 @@ def validation(model, data_loader, device):
             with torch.no_grad():
                 outputs = model(data)
             
-            output_sspike = torch.sum(outputs, dim=4).squeeze_(-1).squeeze_(-1).detach().cpu().numpy()
+            output_spike = torch.sum(outputs, dim=4).squeeze_(-1).squeeze_(-1).detach().cpu().numpy()
             total_len+=len(targets)
-                
+            
+            preds = output_spike.argmax(axis=1)
+            
             total_acc+=(
-                (output_sspike.argmax(axis=1) == targets.cpu().numpy())
+                (preds == targets.cpu().numpy())
                 .sum()
                 .item()
             )
+            
+            all_targets.extend(targets.detach().cpu().numpy())  # Ground truth values
+            all_preds.extend(preds)  # Predicted values
+
             nbatch.set_postfix_str(f"val acc: {total_acc / total_len:.3f}")
+            
+    return total_acc, total_len, (all_targets, all_preds)
