@@ -164,13 +164,37 @@ class DVSGestureNet(BaseNet):
         
         # Configuration of layers for DVSGestureNet
         layer_configs = [
-            (conv_pool_block, {'in_channels': 2, 'out_channels': 15, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
+            (conv_pool_block, {'in_channels': 2, 'out_channels': 15, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), 
+            (conv_pool_block, {'in_channels': 15, 'out_channels': 40, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), 
+            (conv_pool_block, {'in_channels': 40, 'out_channels': 80, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), 
+            (conv_pool_block, {'in_channels': 80, 'out_channels': 160, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), 
+            (conv_pool_block, {'in_channels': 160, 'out_channels': 320, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), 
+            (L.SNNLinear, {'in_features': 5120, 'out_features': 512, **self.tsslbp_config}),
+            (L.SNNLinear, {'in_features': 512, 'out_features': 11, **self.tsslbp_config}),
+        ]
+
+        # Create the layers dynamically and store them in self.layers
+        self.layers = nn.ModuleList(self._make_layers(layer_configs))
+        
+        # If a weight path is provided, load the model weights
+        if weight is not None:
+            self.load_model(weight)
+            
+
+# DVSGesture Network 64x64 input
+class PPGen4NetMini(BaseNet):
+    def __init__(self, tau_m, tau_s, n_steps, weight = None):
+        super(PPGen4NetMini, self).__init__(tau_m, tau_s, n_steps)
+        
+        # Configuration of layers for NCARSNet
+        layer_configs = [
+            (conv_pool_block, {'in_channels': 1, 'out_channels': 15, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
             (conv_pool_block, {'in_channels': 15, 'out_channels': 40, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
             (conv_pool_block, {'in_channels': 40, 'out_channels': 80, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
             (conv_pool_block, {'in_channels': 80, 'out_channels': 160, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
-            (conv_pool_block, {'in_channels': 160, 'out_channels': 320, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
-            (L.SNNLinear, {'in_features': 5120, 'out_features': 512, **self.tsslbp_config}),
-            (L.SNNLinear, {'in_features': 512, 'out_features': 11, **self.tsslbp_config}),
+            (conv_pool_block, {'in_channels': 160, 'out_channels': 320, 'kernel_size': 3, 'padding': 1, 'pooling_size': 4, 'pooling_stride': 4, 'tsslbp_config': self.tsslbp_config}),
+            (L.SNNLinear, {'in_features': 320, 'out_features': 64, **self.tsslbp_config}),
+            (L.SNNLinear, {'in_features': 64, 'out_features': 5, **self.tsslbp_config}),
         ]
 
         # Create the layers dynamically and store them in self.layers

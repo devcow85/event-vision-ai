@@ -3,7 +3,8 @@ from dataclasses import dataclass
 import numpy as np
 import tonic
 from torchvision.transforms.functional import to_pil_image
-
+import torch.nn.functional as F
+import torch
 
 @dataclass
 class RandomTemporalCrop:
@@ -71,22 +72,34 @@ class ToFrameAuto:
 @dataclass(frozen=True)
 class MergeFramePolarity:
     bias: int = 128
+    scale: float = 1.0  # Add a scaling factor with default value 1.0
 
     def __call__(self, frames):
-        merged_frames = np.zeros((frames.shape[0],1,)+frames.shape[2:], dtype=np.int16)
+        merged_frames = np.zeros((frames.shape[0], 1,) + frames.shape[2:], dtype=np.int16)
     
         for i, frame in enumerate(frames):
-            merged_frames[i][0] = self.bias + (frame[1] - frame[0])
+            # Apply the scale to the difference between frame[1] and frame[0]
+            merged_frames[i][0] = self.bias + self.scale * (frame[1] - frame[0])
         
         return merged_frames  # channel first format
+
+
+@dataclass(frozen=True)
+class MinMaxScaler:
+    min_val: float
+    max_val: float
+    
+    def __call__(self, frame):
+        return (frame - self.min_val) / (self.max_val - self.min_val)*255
         
+
 @dataclass(frozen=True)
 class EventFrameResize:
     size: tuple
     
     def __call__(self, frames):
         
-        resized_frame = np.zeros(frames.shape[:2]+self.size, dtype=np.int16)
+        resized_frame = np.zeros(frames.shape[:2]+self.size[::-1], dtype=np.int16)
         for idx, frame in enumerate(frames):
             frame = frame.astype(np.uint8)
             pil_frame = to_pil_image(frame.transpose(1,2,0))
@@ -94,6 +107,33 @@ class EventFrameResize:
         
         return resized_frame  # Stack frames back into a single tensor
 
+@dataclass(frozen=True)
+class EventFrameSumResize:
+    size: tuple  # target size (width, height)
+
+    def __call__(self, frames):
+        # frames are assumed to be in shape (batch_size, channels, height, width)
+
+        # Get the target size
+        target_height, target_width = self.size
+
+        # Prepare an empty array to hold the resized frames
+        resized_frame = np.zeros((frames.shape[0], frames.shape[1], target_height, target_width), dtype=np.int16)
+
+        for idx, frame in enumerate(frames):
+            # Apply sum pooling by reducing the resolution using summation over pooling windows
+            frame_tensor = torch.from_numpy(frame).float()  # Convert the frame to a torch tensor
+
+            # Perform sum pooling using a kernel size corresponding to the downscaling factor
+            scale_y = frame.shape[1] // target_height
+            scale_x = frame.shape[2] // target_width
+            pooled_frame = F.avg_pool2d(frame_tensor, kernel_size=(scale_y, scale_x), stride=(scale_y, scale_x)) * (scale_y * scale_x)
+
+            # Convert back to numpy and store it in resized_frame
+            resized_frame[idx] = pooled_frame.numpy().astype(np.int16)
+
+        return resized_frame  # Return the resized frames
+    
 @dataclass(frozen=True)
 class EventNormalize:
     mean: tuple = (0.485, 0.456, 0.406)

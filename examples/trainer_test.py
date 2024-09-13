@@ -43,7 +43,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.AdamW(snn_model.parameters(), lr=0.001)
     spikeloss = loss.SpikeCountLoss(4, 1)
     
-    num_epochs = 5  # 원하는 에포크 수 설정
+    num_epochs = 3  # 원하는 에포크 수 설정
     
     snn_eva = EVA(snn_model, optimizer, spikeloss, (train_loader, val_loader), num_epochs, "cuda:0")
     snn_eva.trainer()

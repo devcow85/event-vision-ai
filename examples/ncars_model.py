@@ -10,20 +10,19 @@ if __name__ == "__main__":
     utils.set_seed(7)
     
     # # load dataset
-    transform = transforms.Compose([
+    transform = transform = transforms.Compose([
         eva_transforms.RandomTemporalCrop(time_window = 66000),
-        transforms.Denoise(filter_time=11000),
         eva_transforms.ToFrameAuto(n_time_bins=5),
         eva_transforms.MergeFramePolarity(),
         eva_transforms.EventFrameResize((64,64)),
         eva_transforms.EventNormalize(mean=(128,), std=(1,))
+
     ])
     
     train_ds = NCARS(root = '/data/Prophesee_Dataset_n_cars', train=True, transform=transform)
     
     transform = transforms.Compose([
         eva_transforms.TemporalCrop(time_window = 66000),
-        transforms.Denoise(filter_time=11000),
         eva_transforms.ToFrameAuto(n_time_bins=5),
         eva_transforms.MergeFramePolarity(),
         eva_transforms.EventFrameResize((64,64)),

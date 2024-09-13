@@ -98,11 +98,11 @@ def train(model, epochs, data_loader, optimizer, loss, device = "cuda"):
         for data, targets in nbatch:
             data = data.to(torch.float32)
             data, targets = data.to(device), targets.to(device)
-            
+                        
             optimizer.zero_grad()
             outputs = model(data)
             
-            output_sspike = torch.sum(outputs, dim=4).squeeze_(-1).squeeze_(-1).detach().cpu().numpy()
+            output_spike = torch.sum(outputs, dim=4).squeeze_(-1).squeeze_(-1).detach().cpu().numpy()
             
             vloss = loss(outputs, targets)
             vloss.backward()
@@ -115,7 +115,7 @@ def train(model, epochs, data_loader, optimizer, loss, device = "cuda"):
             total_len+=len(targets)
             
             total_acc+=(
-                (output_sspike.argmax(axis=1) == targets.cpu().numpy())
+                (output_spike.argmax(axis=1) == targets.cpu().numpy())
                 .sum()
                 .item()
             )
@@ -128,6 +128,8 @@ def train(model, epochs, data_loader, optimizer, loss, device = "cuda"):
 def validation(model, data_loader, device):
     total_acc = 0
     total_len = 0
+    all_targets = []
+    all_preds = []
     
     model.eval()
     
@@ -139,14 +141,20 @@ def validation(model, data_loader, device):
             with torch.no_grad():
                 outputs = model(data)
             
-            output_sspike = torch.sum(outputs, dim=4).squeeze_(-1).squeeze_(-1).detach().cpu().numpy()
+            output_spike = torch.sum(outputs, dim=4).squeeze_(-1).squeeze_(-1).detach().cpu().numpy()
             total_len+=len(targets)
-                
+            
+            preds = output_spike.argmax(axis=1)
+            
             total_acc+=(
-                (output_sspike.argmax(axis=1) == targets.cpu().numpy())
+                (preds == targets.cpu().numpy())
                 .sum()
                 .item()
             )
+            
+            all_targets.extend(targets.detach().cpu().numpy())  # Ground truth values
+            all_preds.extend(preds)  # Predicted values
+
             nbatch.set_postfix_str(f"val acc: {total_acc / total_len:.3f}")
             
-    return total_acc, total_len
+    return total_acc, total_len, (all_targets, all_preds)
