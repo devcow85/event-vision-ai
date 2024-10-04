@@ -1,0 +1,21 @@
+{
+    "num_layers": 11,
+    "input_shape": [
+        5,
+        1,
+        64,
+        64
+    ],
+    "num_classes": 5,
+    "num_parameters": 641003,
+    "use_tsslbp": true,
+    "tau_m": 16,
+    "tau_s": 1,
+    "n_steps": 5,
+    "batch_size": 16,
+    "learning_rate": 0.0001,
+    "desired_count": 4,
+    "undesired_count": 1,
+    "best_val_acc": 0.80262887656603,
+    "best_epoch": 98
+}

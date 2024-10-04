@@ -1,6 +1,7 @@
 data
 cache
 build
-result
+
 *egg-info*
 __pycache__
+kmwork_temp

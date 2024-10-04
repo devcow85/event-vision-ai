@@ -3,8 +3,12 @@ from dataclasses import dataclass
 import numpy as np
 import tonic
 from torchvision.transforms.functional import to_pil_image
+import torchvision.transforms as T
+
 import torch.nn.functional as F
 import torch
+from PIL import Image
+
 
 @dataclass
 class RandomTemporalCrop:
@@ -56,9 +60,16 @@ class ToFrameAuto:
     n_event_bins: Optional[int] = None
     overlap: float = 0
     include_incomplete: bool = False
+    aspect_ratio: Optional[bool] = True
 
     def __call__(self, events):
         sensor_size = (max(events["x"]) + 1, max(events["y"]) + 1, 2)
+        
+        if self.aspect_ratio:
+            x_max, y_max = max(events["x"]), max(events["y"])
+            w_max = max(x_max, y_max) + 1
+            sensor_size = (w_max, w_max, 2)
+            
         return tonic.transforms.ToFrame(
             sensor_size=sensor_size,
             time_window=self.time_window,
@@ -103,8 +114,37 @@ class EventFrameResize:
         for idx, frame in enumerate(frames):
             frame = frame.astype(np.uint8)
             pil_frame = to_pil_image(frame.transpose(1,2,0))
+            
             resized_frame[idx] = pil_frame.resize(self.size)
         
+        return resized_frame  # Stack frames back into a single tensor
+
+@dataclass(frozen=True)
+class EventFrameRandomResizedCrop:
+    size: tuple  # 목표 크기 (width, height)
+    scale: tuple = (0.08, 1.0)  # 크롭할 이미지 크기의 범위 비율 (default는 RandomResizedCrop의 기본값)
+    ratio: tuple = (3. / 4., 4. / 3.)  # 크롭할 이미지의 가로 세로 비율 범위
+    interpolation: int = Image.BILINEAR  # 리사이즈 시 사용할 보간법
+    
+    def __call__(self, frames):
+        """
+        frames: (N, H, W, C) 형식의 여러 개의 프레임을 입력받아 RandomResizedCrop으로 크롭하고, 다시 target size로 resize.
+        """
+        # RandomResizedCrop 설정: 입력된 파라미터들을 활용
+        random_resized_crop = T.RandomResizedCrop(self.size, scale=self.scale, ratio=self.ratio, interpolation=self.interpolation)
+
+        resized_frame = np.zeros(frames.shape[:2] + self.size[::-1], dtype=np.int16)
+
+        for idx, frame in enumerate(frames):
+            frame = frame.astype(np.uint8)
+            pil_frame = to_pil_image(frame.transpose(1, 2, 0))  # frame을 PIL 이미지로 변환
+
+            # RandomResizedCrop을 적용하여 크롭 및 리사이즈
+            pil_frame_cropped = random_resized_crop(pil_frame)
+
+            # 결과를 resized_frame 배열에 저장
+            resized_frame[idx] = pil_frame_cropped
+
         return resized_frame  # Stack frames back into a single tensor
 
 @dataclass(frozen=True)

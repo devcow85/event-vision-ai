@@ -89,6 +89,11 @@ class BaseNet(nn.Module):
         
     def load_model(self, filename):
         model_data = torch.load(filename)
+        
+        keys_to_delete = [key for key in model_data['state_dict'].keys() if 'membrain_input' in key]
+        for key in keys_to_delete:
+            del model_data['state_dict'][key]
+        
         self.load_state_dict(model_data['state_dict'])
         self.tsslbp_config = model_data['tsslbp_config']
         
@@ -188,11 +193,34 @@ class PPGen4NetMini(BaseNet):
         
         # Configuration of layers for NCARSNet
         layer_configs = [
-            (conv_pool_block, {'in_channels': 1, 'out_channels': 15, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
-            (conv_pool_block, {'in_channels': 15, 'out_channels': 40, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
-            (conv_pool_block, {'in_channels': 40, 'out_channels': 80, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
-            (conv_pool_block, {'in_channels': 80, 'out_channels': 160, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}),
-            (conv_pool_block, {'in_channels': 160, 'out_channels': 320, 'kernel_size': 3, 'padding': 1, 'pooling_size': 4, 'pooling_stride': 4, 'tsslbp_config': self.tsslbp_config}),
+            (conv_pool_block, {'in_channels': 1, 'out_channels': 15, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), #32
+            (conv_pool_block, {'in_channels': 15, 'out_channels': 40, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), #16
+            (conv_pool_block, {'in_channels': 40, 'out_channels': 80, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), #8
+            (L.SNNConv3d, {'in_channels': 80, 'out_channels': 160, 'kernel_size': 3, 'padding': 1, 'stride': 2, **self.tsslbp_config}), # 4
+            (conv_pool_block, {'in_channels': 160, 'out_channels': 320, 'kernel_size': 3, 'padding': 1, 'pooling_size': 4, 'pooling_stride': 4, 'tsslbp_config': self.tsslbp_config}), # ?
+            (L.SNNLinear, {'in_features': 320, 'out_features': 64, **self.tsslbp_config}),
+            (L.SNNLinear, {'in_features': 64, 'out_features': 5, **self.tsslbp_config}),
+        ]
+
+        # Create the layers dynamically and store them in self.layers
+        self.layers = nn.ModuleList(self._make_layers(layer_configs))
+        
+        # If a weight path is provided, load the model weights
+        if weight is not None:
+            self.load_model(weight)
+
+# DVSGesture Network 64x64 input
+class PPGen4NetMini128(BaseNet):
+    def __init__(self, tau_m, tau_s, n_steps, weight = None):
+        super(PPGen4NetMini128, self).__init__(tau_m, tau_s, n_steps)
+        
+        # Configuration of layers for NCARSNet
+        layer_configs = [
+            (conv_pool_block, {'in_channels': 1, 'out_channels': 15, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), # 40
+            (conv_pool_block, {'in_channels': 15, 'out_channels': 40, 'kernel_size': 5, 'padding': 2, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), # 20
+            (conv_pool_block, {'in_channels': 40, 'out_channels': 80, 'kernel_size': 3, 'padding': 1, 'pooling_size': 2, 'pooling_stride': 2, 'tsslbp_config': self.tsslbp_config}), # 10
+            (L.SNNConv3d, {'in_channels': 80, 'out_channels': 160, 'kernel_size': 3, 'padding': 1, 'stride': 1, **self.tsslbp_config}), # 10
+            (conv_pool_block, {'in_channels': 160, 'out_channels': 320, 'kernel_size': 3, 'padding': 1, 'pooling_size': 10, 'pooling_stride': 10, 'tsslbp_config': self.tsslbp_config}),  # 5 -> 1
             (L.SNNLinear, {'in_features': 320, 'out_features': 64, **self.tsslbp_config}),
             (L.SNNLinear, {'in_features': 64, 'out_features': 5, **self.tsslbp_config}),
         ]

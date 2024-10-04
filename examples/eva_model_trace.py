@@ -13,7 +13,7 @@ if __name__ == "__main__":
     snn_model.register_hook()
     out = snn_model(torch.rand((1,5,1,64,64)))
     
-    trace_file_path = 'examples/testvector_v0.pickle'
+    trace_file_path = 'examples/testvector_gen4_m2_81p.pickle'
     snn_model.save_trace_dict(trace_file_path)
     
     with open(trace_file_path, 'rb') as file:

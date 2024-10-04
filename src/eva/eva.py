@@ -53,9 +53,8 @@ def save_acc_metric_fig(precision_per_class, recall_per_class, f1_per_class, acc
     
 def cal_perf_metrics(gt, pred):
     num_gt_classes = len(np.unique(gt))
-    num_pred_classes = len(np.unique(pred))
     
-    conf_mat = np.zeros((num_gt_classes, num_pred_classes))
+    conf_mat = np.zeros((num_gt_classes, num_gt_classes))
     for t, p in zip(gt, pred):
         conf_mat[t, p] +=1
         
